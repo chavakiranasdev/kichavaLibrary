@@ -1,42 +1,47 @@
-public enum AlgorithmToUse
+namespace KichavaLibrary.Leet.Easy.TwoSum
 {
-    BruteForce,
-}
-public class Solution
-{
-    public int[] TwoSum(int[] nums, int target, AlgorithmToUse algorithmToUse = AlgorithmToUse.BruteForce)
+    using System;
+
+    public enum AlgorithmToUse
     {
-        switch (algorithmToUse)
-        {
-            case AlgorithmToUse.BruteForce:
-                return BruteForce(nums, target);
-            default:
-                return BruteForce(nums, target);
-        }
+        BruteForce,
     }
-    private int[] BruteForce(int[] nums, int target)
+    public class Solution
     {
-        if (nums == null) return null;
-        var length = nums.Length;
-        if (length == 0) { return null; }
-        if (length == 1)
+        public int[] TwoSum(int[] nums, int target, AlgorithmToUse algorithmToUse = AlgorithmToUse.BruteForce)
         {
-            if (target != nums[0])
+            switch (algorithmToUse)
             {
-                return null;
+                case AlgorithmToUse.BruteForce:
+                    return BruteForce(nums, target);
+                default:
+                    return BruteForce(nums, target);
             }
-            return new int[] { 0 };
         }
-        for (int i = 0; i < length; i++)
+        private int[] BruteForce(int[] nums, int target)
         {
-            for (int j = i + 1; j < length; j++)
+            if (nums == null) return null;
+            var length = nums.Length;
+            if (length == 0) { return null; }
+            if (length == 1)
             {
-                if (nums[i] + nums[j] == target)
+                if (target != nums[0])
                 {
-                    return new int[] { i, j };
+                    return null;
+                }
+                return new int[] { 0 };
+            }
+            for (int i = 0; i < length; i++)
+            {
+                for (int j = i + 1; j < length; j++)
+                {
+                    if (nums[i] + nums[j] == target)
+                    {
+                        return new int[] { i, j };
+                    }
                 }
             }
+            return null;
         }
-        return null;
     }
 }

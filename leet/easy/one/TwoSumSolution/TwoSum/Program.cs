@@ -1,7 +1,7 @@
-﻿using System;
-
-namespace TwoSum
+﻿namespace KichavaLibrary.Leet.Easy.TwoSum
 {
+    using System;
+
     class Program
     {
         static void Main(string[] args)
