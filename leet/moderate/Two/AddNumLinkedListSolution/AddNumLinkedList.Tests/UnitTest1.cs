@@ -18,17 +18,18 @@ namespace AddNumLinkedList.Tests
             ListNode l1 = ConvertNumberToListNode(num1);
             ListNode l2 = ConvertNumberToListNode(num2);
             var actual = new Solution().AddTwoNumbers(l1, l2);
-            var actualNumber = GetNumberFromList(actual);
+            var actualNumber = ValidateAndGetNumberFromList(actual);
             Assert.AreEqual(expected, actualNumber, "Incorrect value received");
         }
 
-        private int GetNumberFromList(ListNode node)
+        private int ValidateAndGetNumberFromList(ListNode node)
         {
             if(node == null) return 0;
             int num = 0;
             int i = 1;
             do
             {
+                Assert.AreEqual(node.val / 10, 0, "A node value can not have more than one digit");
                 num = num + i * node.val;
                 node = node.next;
                 i = i * 10;
