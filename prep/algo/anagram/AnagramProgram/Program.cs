@@ -17,10 +17,15 @@
                 "DCBA" 
             };
 
+            Console.WriteLine("First algorithm");
             var anagrams = new Anagram().GetAnagrams(input, givenDictionary);
             Console.WriteLine(String.Join("\n", anagrams));
 
-            Console.WriteLine("Press any key to exit");
+            Console.WriteLine("Second algorithm");
+            anagrams = new Anagram().GetAnagrams(input, givenDictionary, Anagram.AnagramAlgorithm.DictionaryMap);
+            Console.WriteLine(String.Join("\n", anagrams));
+
+            Console.WriteLine("The End");
         }
     }
 }
