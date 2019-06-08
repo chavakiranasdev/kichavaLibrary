@@ -27,6 +27,7 @@ namespace KichavaLibrary.AnagramProgram
 
         private List<string> GetAnagrams_QuickLinq(string input, IList<string> givenDictionary)
         {
+            Console.WriteLine("Inside QuickLinq");
             var listOfAnagrams = new List<string>();
             var sortedInput = String.Concat(input.OrderBy(c => c));
             foreach(var wordFromDictionary in givenDictionary)
@@ -41,6 +42,7 @@ namespace KichavaLibrary.AnagramProgram
         }
         private List<string> GetAnagrams_DictionaryMap(string input, IList<string> givenDictionary)
         {
+            Console.WriteLine("Inside DictionaryMap");
             var listOfAnagrams = new List<string>();
             var inputDictionaryMap = new Dictionary<char, int>();
             var movingDictionaryMap = new Dictionary<char, int>();
