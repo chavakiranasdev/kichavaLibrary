@@ -3,6 +3,7 @@ namespace KichavaLibrary.AnagramProgram
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using Kichava.Library.Common;
 
     public class Anagram
@@ -14,6 +15,7 @@ namespace KichavaLibrary.AnagramProgram
             {
                 return new List<string>();
             }
+            input = Regex.Replace(input, "\\s", String.Empty);
             switch (anagramAlgorithm)
             {
                 case AnagramAlgorithm.QuickLinq:
@@ -33,6 +35,7 @@ namespace KichavaLibrary.AnagramProgram
             foreach(var wordFromDictionary in givenDictionary)
             {
                 var sortedCurrentWord = String.Concat(wordFromDictionary.OrderBy(c =>c));
+                sortedCurrentWord = Regex.Replace(sortedCurrentWord, "\\s", String.Empty);
                 if (String.Equals(sortedInput, sortedCurrentWord, StringComparison.OrdinalIgnoreCase))
                 {
                     listOfAnagrams.Add(wordFromDictionary);
@@ -57,14 +60,14 @@ namespace KichavaLibrary.AnagramProgram
 
             foreach (var currentWord in givenDictionary)
             {
-                if (currentWord.Length != input.Length)
-                {
-                    continue;
-                }
                 bool isMatch = true;
                 movingDictionaryMap = new Dictionary<char, int>();
                 foreach (char c in currentWord)
                 {
+                    if (Char.IsWhiteSpace(c))
+                    {
+                        continue;
+                    }
                     if (!inputDictionaryMap.ContainsKey(c))
                     {
                         // we have a letter which is missing in original string
