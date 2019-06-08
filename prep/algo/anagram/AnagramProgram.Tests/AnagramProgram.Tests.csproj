@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AnagramProgram\AnagramProgram.csproj" />
+    <ProjectReference Include="..\..\..\..\common\Kichava.Library.Common\Kichava.Library.Common.csproj" />
   </ItemGroup>
 
 </Project>
