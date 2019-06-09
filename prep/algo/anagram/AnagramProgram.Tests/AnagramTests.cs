@@ -12,6 +12,8 @@ namespace AnagramProgram.Tests
         [TestMethod]
         [DataRow(Anagram.AnagramAlgorithm.DictionaryMap)]
         [DataRow(Anagram.AnagramAlgorithm.QuickLinq)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDict)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDictInputWithinDict)]
         public void Anagram_Positive_ShouldReturnExpected(Anagram.AnagramAlgorithm algorithm)
         {
             var input = "ABCD";
@@ -37,6 +39,8 @@ namespace AnagramProgram.Tests
         [TestMethod]
         [DataRow(Anagram.AnagramAlgorithm.DictionaryMap)]
         [DataRow(Anagram.AnagramAlgorithm.QuickLinq)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDict)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDictInputWithinDict)]
         public void Anagram_Null_ShouldReturnEmpty(Anagram.AnagramAlgorithm algorithm)
         {
             string input = null;
@@ -56,6 +60,8 @@ namespace AnagramProgram.Tests
         [TestMethod]
         [DataRow(Anagram.AnagramAlgorithm.DictionaryMap)]
         [DataRow(Anagram.AnagramAlgorithm.QuickLinq)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDict)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDictInputWithinDict)]
         public void Anagram_DictionaryNull_ShouldReturnEmpty(Anagram.AnagramAlgorithm algorithm)
         {
             var input = "ABCD";
@@ -69,6 +75,8 @@ namespace AnagramProgram.Tests
         [TestMethod]
         [DataRow(Anagram.AnagramAlgorithm.DictionaryMap)]
         [DataRow(Anagram.AnagramAlgorithm.QuickLinq)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDict)]
+        [DataRow(Anagram.AnagramAlgorithm.PreProcessDictInputWithinDict)]
         public void Anagram_InputSpaces_ShouldReturnExpected(Anagram.AnagramAlgorithm algorithm)
         {
             var input = "AB C D";
