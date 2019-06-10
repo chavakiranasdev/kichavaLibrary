@@ -1,4 +1,4 @@
-﻿namespace Kichava.Library.Trie
+﻿namespace Kichava.Library.TrieLib
 {
     using System;
     using System.Collections.Generic;
@@ -98,7 +98,7 @@
             var result = new List<T>();
             var stack = new Stack<TrieNode<T>>();
             stack.Push(trieRoot);
-            if (stack.Count != 0)
+            while (stack.Count != 0)
             {
                 var currentNode = stack.Pop();
                 if (currentNode.IsComplete)
