@@ -50,57 +50,26 @@ public class Solution
                 currentRow++;
             }
         } while (isAtleastOneBestFitFound);
-        // Current cell doesn't have initial value, + we couldn't find single match. 
-        // Try one of the randomly available values. (note: randomly - not in sequence or not in first) 
-        // Thinking lound here .... 
-        // Select one of available values - 
-        // Mark it as Inprogress. 
-        // Move to next - 
-        // If we can not find a match for a cell - 
-        // Move back to Previous InProgress cell -  (for now move back to starting)
-        // repeat the same until whole row is filled. 
 
         // Second round - Try to do best guess
-        currentRow = 0;
-        while (currentRow < SizeOfSudoku)
+        bool response = true;
+        var rand = new Random().Next(1, 3);
+        rand = 1; // for now only by row
+        switch (rand)
         {
-            currentColumn = 0;
-            while (currentColumn < SizeOfSudoku)
-            {
-                var currentCell = cellBoard[currentRow, currentColumn];
-                if (currentCell.CurrentValue != 0)
-                {
-                    if (currentCell.IsInitialValue || currentCell.IsSolvedWithConfidence)
-                    {
-                        currentRow++;
-                        currentColumn++;
-                        continue; // we already have a value, move to next.
-                    }
-                    else
-                    {
-                        // We are backtracking .... remove this value
-                        RemoveCellValue(currentRow, currentColumn);
-                    }
-                }
-                // we will still try for best fit, but don't set the value as IsCompletedWithConfidence - 
-                // Reason - some of our previous values may not be best fit, thus this can not be best fit, if the other guess is wrong.
-                var bestGuess = GetBestGuess(currentRow, currentColumn);
-                if (bestGuess != 0)
-                {
-                    // We have a guess. Update the cell with this value.
-                    UpdateCellValue(currentRow, currentColumn, bestGuess, false, true, false);
-                }
-                else 
-                {
-                    // We don't have a match - back track
-                    // How far we go? 
-                    // We could go one step at a time - 
-                    // Or we could go to the beginning of current row to start with - we could improve in phase two. 
-                    currentColumn = -1; // next increment will bring it to zero
-                }
-                currentColumn++;
-            }
-            currentRow++;
+            case 1:
+                response = SolveByRow();
+                break;
+            case 2:
+                response = SolveByColumn();
+                break;
+            case 3:
+                response = SolveByGrid();
+                break;
+        }
+        if (response == false)
+        {
+            Console.WriteLine("Bug: Unable to solve given Sudoku");
         }
 
         // we should be done now. 
@@ -109,9 +78,126 @@ public class Solution
         {
             for (int j = 0; j < SizeOfSudoku; j++)
             {
-                board[i][j] = (char)cellBoard[i, j].CurrentValue;
+                board[i][j] = Convert.ToChar(cellBoard[i, j].CurrentValue + 48);
             }
         }
+    }
+
+    private bool SolveByGrid()
+    {
+        bool response = true;
+        //  Solve grid by grid
+        for (int currentGrid = 0; currentGrid < SizeOfSudoku; currentGrid++)
+        {
+            var rowStart = (int)(Math.Floor((double)(currentGrid / 3)) * 3);
+            var columnStart = (currentGrid % 3) * 3;
+            if (!SolveGivenSubBlock(rowStart, rowStart + 2, columnStart, columnStart + 2))
+            {
+                response = false;
+                Console.WriteLine("Bug? Unable to solve some of the grid");
+            }
+        }
+        return response;
+    }
+
+    private bool SolveGivenSubBlock(int rowStart, int rowEnd, int columnStart, int columnEnd)
+    {
+        bool response = true;
+        for (int currentRow = rowStart; currentRow <= rowEnd; currentRow++)
+        {
+            for (int currentColumn = columnStart; currentColumn <= columnEnd; currentColumn++)
+            {
+                var currentCell = cellBoard[currentRow, currentColumn];
+                if (currentCell.CurrentValue == 0)
+                {
+                    var bestGuess = GetBestGuess(currentRow, currentColumn);
+                    if (bestGuess != 0)
+                    {
+                        // We have a guess. Update the cell with this value.
+                        UpdateCellValue(currentRow, currentColumn, bestGuess, false, false, true);
+                    }
+                    else
+                    {
+                        // go back tracking.
+                        if (!BackTrackRealThisTime(currentRow, currentColumn))
+                        {
+                            response = false;
+                            Console.WriteLine($"Bug? Unable to solve {currentRow} :: {currentColumn}");
+                        }
+                    }
+                }
+            }
+        }
+        return response;
+    }
+
+    private bool SolveByColumn()
+    {
+        // Cheating until we implement this 
+        return SolveByRow();
+    }
+    private bool SolveByRow()
+    {
+        bool response = true;
+        if (!SolveGivenSubBlock(rowStart: 0, rowEnd: SizeOfSudoku - 1, columnStart: 0, columnEnd: SizeOfSudoku - 1))
+        {
+            response = false;
+            Console.WriteLine("Bug? Unable to solve some of the grid");
+        }
+        return response;
+    }
+    private bool BackTrackRealThisTime(int currentRow, int currentColumn)
+    {
+        // Is there a match readily available? Before we try deleting other cells, let us try as is with current setting.
+        var preBackTrackBestGuess = GetBestGuess(currentRow, currentColumn);
+        if (preBackTrackBestGuess != 0)
+        {
+            // We have a guess. Update the cell with this value. No need to back track any further
+            UpdateCellValue(currentRow, currentColumn, preBackTrackBestGuess, false, false, true);
+            return true;
+        }
+
+        int startColumnInCurrentRow = currentColumn; // first row, we start with given column, then onwards we always start at end
+        for (int tempRow = currentRow; tempRow >= 0; tempRow--)
+        {
+            for (int tempColumn = startColumnInCurrentRow; tempColumn >= 0; tempColumn--)
+            {
+                var tempCell = cellBoard[tempRow, tempColumn];
+                if (tempCell.IsInProgress && tempCell.CurrentValue != 0)
+                {
+                    var tempValue = tempCell.CurrentValue;
+                    RemoveCellValue(tempRow, tempColumn);
+                    // Now that a value is removed, we might be lucky to find a best match for our current cell
+                    // lazy to write another function to check whether tempValue fits here. reusing existing logic, mostly same performance though
+                    var currentBestGuess = GetBestGuess(currentRow, currentColumn);
+                    if (currentBestGuess != 0)
+                    {
+                        // We have a guess. Update the cell with this value.
+                        UpdateCellValue(currentRow, currentColumn, currentBestGuess, false, false, true);
+                        // Now back trak starting with removed cell again. If return value is true, we can keep it otherwise revert it
+                        if (BackTrackRealThisTime(tempRow, tempColumn))
+                        {
+                            return true; // found perfect match up to this point.
+                        }
+                        else
+                        {
+                            // Give up claim. 
+                            RemoveCellValue(currentRow, currentColumn);
+                            UpdateCellValue(tempRow, tempColumn, tempValue, false, false, true);
+                            // Search continues .... 
+                        }
+                    }
+                    else
+                    {
+                        // Replace the value we removed just now
+                        UpdateCellValue(tempRow, tempColumn, tempValue, false, false, true);
+                    }
+                }
+            }
+            // Except given row, previous rows starts at the end
+            startColumnInCurrentRow = SizeOfSudoku - 1;
+        }
+        return false;
     }
 
     private void RemoveCellValue(int row, int column)
@@ -119,11 +205,18 @@ public class Solution
         var currentCell = cellBoard[row, column];
         var currentValue = currentCell.CurrentValue;
         currentCell.Reset();
-
+        if (!currentCell.NotFitForThisCell.Contains(currentValue))
+        {
+            //currentCell.NotFitForThisCell.Add(currentValue); // Just make a note, so next time we try some other value, if possible
+        }
         ResetAvailableListsFromCellBoardFor(row, column, currentValue);
     }
     private void UpdateCellValue(int row, int column, int newValue, bool isInitialValue, bool isSolvedWithConfidence, bool isInProgress)
     {
+        if (newValue == 0)
+        {
+            Console.WriteLine("Bug? Updating zero value?");
+        }
         cellBoard[row, column].CurrentValue = newValue;
         cellBoard[row, column].IsSolvedWithConfidence = isSolvedWithConfidence;
         cellBoard[row, column].IsInitialValue = isInitialValue;
@@ -149,6 +242,16 @@ public class Solution
     {
         var gridKey = GetGridNumber(row, column);
         var availableInAllThree = rowAvailableList[row].Intersect(columnAvailableList[column]).Intersect(gridAvailableList[gridKey]);
+        //var notFitList = cellBoard[row, column].NotFitForThisCell;
+        //var availableInAllThreeExcludingNotFit = availableInAllThree.Except(notFitList);
+        //var count = availableInAllThreeExcludingNotFit.Count();
+
+        //if (count != 0)
+        //{
+        //var random = new Random();
+        //return availableInAllThreeExcludingNotFit.ElementAt(random.Next(0, count));
+        // Notfit is just a guideline. We respect only if we have a choice. Otherwise no. 
+        //}
         var count = availableInAllThree.Count();
         if (count != 0)
         {
@@ -229,7 +332,7 @@ public class Solution
         3.   4.  5
         2,0 2,1 2,2
         6.   7.  8 
-        
+
         row*SizeOfSudoku/3 + column 
         */
 
