@@ -60,7 +60,7 @@ public class Solution
         // Second round - Try to do best guess
         bool response = true;
         var rand = new Random().Next(1, 3);
-        //rand = 1; // for now only by row
+        rand = 1; // for now only by row
         switch (rand)
         {
             case 1:
@@ -175,57 +175,55 @@ public class Solution
     }
     private bool BackTrackRealThisTime(int currentRow, int currentColumn)
     {
-        // Is there a match readily available? Before we try deleting other cells, let us try as is with current setting.
-        var preBackTrackBestGuess = GetBestGuess(currentRow, currentColumn);
-        if (preBackTrackBestGuess != 0)
-        {
-            // We have a guess. Update the cell with this value. No need to back track any further
-            UpdateCellValue(currentRow, currentColumn, preBackTrackBestGuess, CellState.InProgress);
-            return true;
-        }
+        var stack = new Stack<CellLocation>();
+        // clear not fit for this, if any from prevous attempts.
+        cellBoard[currentRow, currentColumn].ClearNotFitForThis();
+        stack.Push(new CellLocation() { Row = currentRow, Column = currentColumn });
 
-        // TODO: Kichava I am here. Change logic to go one back other until all matches found. Use NotFit of cell
-        int startColumnInCurrentRow = currentColumn; // first row, we start with given column, then onwards we always start at end
-        for (int tempRow = currentRow; tempRow >= 0; tempRow--)
+        while (stack.Count != 0)
         {
-            for (int tempColumn = startColumnInCurrentRow; tempColumn >= 0; tempColumn--)
+            var currentTopOfStack = stack.Peek();
+            var bestGuess = GetBestGuess(currentTopOfStack.Row, currentTopOfStack.Column);
+            if (bestGuess != 0)
             {
-                var tempCell = cellBoard[tempRow, tempColumn];
-                if (tempCell.State == CellState.InProgress && tempCell.CurrentValue != 0)
-                {
-                    var tempValue = tempCell.CurrentValue;
-                    RemoveCellValue(tempRow, tempColumn);
-                    // Now that a value is removed, we might be lucky to find a best match for our current cell
-                    // lazy to write another function to check whether tempValue fits here. reusing existing logic, mostly same performance though
-                    var currentBestGuess = GetBestGuess(currentRow, currentColumn);
-                    if (currentBestGuess != 0)
-                    {
-                        // We have a guess. Update the cell with this value.
-                        UpdateCellValue(currentRow, currentColumn, currentBestGuess, CellState.InProgress);
-                        // Now back trak starting with removed cell again. If return value is true, we can keep it otherwise revert it
-                        if (BackTrackRealThisTime(tempRow, tempColumn))
-                        {
-                            return true; // found perfect match up to this point.
-                        }
-                        else
-                        {
-                            // Give up claim. 
-                            RemoveCellValue(currentRow, currentColumn);
-                            UpdateCellValue(tempRow, tempColumn, tempValue, CellState.InProgress);
-                            // Search continues .... 
-                        }
-                    }
-                    else
-                    {
-                        // Replace the value we removed just now
-                        UpdateCellValue(tempRow, tempColumn, tempValue, CellState.InProgress);
-                    }
-                }
+                // We have a guess. Update the cell with this value.
+                UpdateCellValue(currentTopOfStack.Row, currentTopOfStack.Column, bestGuess, CellState.InProgress);
+                stack.Pop(); // Remove this from stack.
+                continue;
             }
-            // Except given row, previous rows starts at the end
-            startColumnInCurrentRow = SizeOfSudoku - 1;
+            var previousCellLocation = GetPreviousInProgressCellLocation(currentTopOfStack);
+            // Push this cell onto stack after emptying it.;
+            var previousCell = cellBoard[previousCellLocation.Row, previousCellLocation.Column];
+            previousCell.NotFitForThisCell.Add(previousCell.CurrentValue);
+            RemoveCellValue(previousCellLocation.Row, previousCellLocation.Column);
+            // Now that we are moving further back, current cell's notfit is no longer valid.
+            cellBoard[currentTopOfStack.Row, currentTopOfStack.Column].ClearNotFitForThis();
+            stack.Push(previousCellLocation);
         }
-        return false;
+        return true; // stack is empty
+    }
+
+    private CellLocation GetPreviousInProgressCellLocation(CellLocation currentCellLocation)
+    {
+        do
+        {
+            if (currentCellLocation.Row <= 0 && currentCellLocation.Column <= 0)
+            {
+                // No more previous cells. 
+                throw new Exception("No more previous cells, you are at the beginning of cell");
+            }
+            var previousCellLocation = new CellLocation() { Row = currentCellLocation.Row, Column = currentCellLocation.Column - 1 };
+            if (previousCellLocation.Column == -1)
+            {
+                previousCellLocation.Column = SizeOfSudoku - 1;
+                previousCellLocation.Row = currentCellLocation.Row - 1;
+            }
+            if (cellBoard[previousCellLocation.Row, previousCellLocation.Column].State == CellState.InProgress)
+            {
+                return previousCellLocation;
+            }
+            currentCellLocation = previousCellLocation;
+        } while (true);
     }
 
     private void RemoveCellValue(int row, int column)
@@ -268,24 +266,15 @@ public class Solution
     {
         var gridKey = GetGridNumber(row, column);
         var availableInAllThree = rowAvailableList[row].Intersect(columnAvailableList[column]).Intersect(gridAvailableList[gridKey]);
-        //var notFitList = cellBoard[row, column].NotFitForThisCell;
-        //var availableInAllThreeExcludingNotFit = availableInAllThree.Except(notFitList);
-        //var count = availableInAllThreeExcludingNotFit.Count();
-
-        //if (count != 0)
-        //{
-        //var random = new Random();
-        //return availableInAllThreeExcludingNotFit.ElementAt(random.Next(0, count));
-        // Notfit is just a guideline. We respect only if we have a choice. Otherwise no. 
-        //}
-        var count = availableInAllThree.Count();
+        var notFitList = cellBoard[row, column].NotFitForThisCell;
+        var availableInAllThreeExcludingNotFit = availableInAllThree.Except(notFitList);
+        var count = availableInAllThreeExcludingNotFit.Count();
         if (count != 0)
         {
             var random = new Random();
-            // return a random available value
-            return availableInAllThree.ElementAt(random.Next(0, count));
+            return availableInAllThreeExcludingNotFit.ElementAt(random.Next(0, count));
+            // Notfit is just a guideline. We respect only if we have a choice. Otherwise no. 
         }
-        // Didn't find anything avaiable in all three lists? some of previous guess is wrong.
         return 0;
     }
 
@@ -316,7 +305,7 @@ public class Solution
             rowAvailableList.Add(count, new List<int>());
             columnAvailableList.Add(count, new List<int>());
             gridAvailableList.Add(count, new List<int>());
-            for (int i = 0; i < SizeOfSudoku; i++)
+            for (int i = 1; i <= SizeOfSudoku; i++)
             {
                 rowAvailableList[count].Add(i);
                 columnAvailableList[count].Add(i);
@@ -410,5 +399,11 @@ public class Solution
         {
             NotFitForThisCell.Clear();
         }
+    }
+
+    internal class CellLocation
+    {
+        public int Row { set; get; }
+        public int Column { set; get; }
     }
 }
