@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Sudoku.Tests
+namespace Submatrices.Test
 {
     [TestClass]
     public class UnitTest1
