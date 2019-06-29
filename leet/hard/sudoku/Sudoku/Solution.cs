@@ -5,14 +5,20 @@ using System.Linq;
 public class Solution
 {
     // Constants 
-    const int SizeOfSudoku = 9;
+    private int SizeOfSudoku { get; set; }
 
     // Private variables. 
-    private Cell[,] cellBoard = new Cell[SizeOfSudoku, SizeOfSudoku];
+    private Cell[,] cellBoard;
 
     Dictionary<int, List<int>> rowAvailableList = new Dictionary<int, List<int>>();
     Dictionary<int, List<int>> columnAvailableList = new Dictionary<int, List<int>>();
     Dictionary<int, List<int>> gridAvailableList = new Dictionary<int, List<int>>();
+
+    public Solution(int sizeOfSudoku = 9)
+    {
+        SizeOfSudoku = sizeOfSudoku;
+        cellBoard = new Cell[SizeOfSudoku, SizeOfSudoku];
+    }
 
     public void SolveSudoku(char[][] board)
     {
@@ -22,9 +28,9 @@ public class Solution
         InitializeCellArray(board);
 
         // First round - find all those which doesn't need guessing.
-        bool isAtleastOneBestFitFound = false;
-        int currentRow = 0;
-        int currentColumn = 0;
+        bool isAtleastOneBestFitFound;
+        int currentRow;
+        int currentColumn;
         do
         {
             isAtleastOneBestFitFound = false;
@@ -42,7 +48,7 @@ public class Solution
                         {
                             // We have a match. Update the cell with this value.
                             isAtleastOneBestFitFound = true;
-                            UpdateCellValue(currentRow, currentColumn, bestFit, false, true, false);
+                            UpdateCellValue(currentRow, currentColumn, bestFit, CellState.SolvedWithConfidence);
                         }
                     }
                     currentColumn++;
@@ -54,7 +60,7 @@ public class Solution
         // Second round - Try to do best guess
         bool response = true;
         var rand = new Random().Next(1, 3);
-        rand = 1; // for now only by row
+        //rand = 1; // for now only by row
         switch (rand)
         {
             case 1:
@@ -100,6 +106,21 @@ public class Solution
         return response;
     }
 
+    private bool SolveGivenSubBlockByColumn(int rowStart, int rowEnd, int columnStart, int columnEnd)
+    {
+        bool response = true;
+        for (int currentColumn = columnStart; currentColumn <= columnEnd; currentColumn++)
+        {
+            for (int currentRow = rowStart; currentRow <= rowEnd; currentRow++)
+            {
+                if (!SolveGivenCell(currentRow, currentColumn))
+                {
+                    response = false; // do not overwrite this value for next cell's success, and thus above if
+                }
+            }
+        }
+        return response;
+    }
     private bool SolveGivenSubBlock(int rowStart, int rowEnd, int columnStart, int columnEnd)
     {
         bool response = true;
@@ -107,25 +128,26 @@ public class Solution
         {
             for (int currentColumn = columnStart; currentColumn <= columnEnd; currentColumn++)
             {
-                var currentCell = cellBoard[currentRow, currentColumn];
-                if (currentCell.CurrentValue == 0)
+                if (!SolveGivenCell(currentRow, currentColumn))
                 {
-                    var bestGuess = GetBestGuess(currentRow, currentColumn);
-                    if (bestGuess != 0)
-                    {
-                        // We have a guess. Update the cell with this value.
-                        UpdateCellValue(currentRow, currentColumn, bestGuess, false, false, true);
-                    }
-                    else
-                    {
-                        // go back tracking.
-                        if (!BackTrackRealThisTime(currentRow, currentColumn))
-                        {
-                            response = false;
-                            Console.WriteLine($"Bug? Unable to solve {currentRow} :: {currentColumn}");
-                        }
-                    }
+                    response = false; // do not overwrite this value for next cell's success, and thus above if
                 }
+            }
+        }
+        return response;
+    }
+    private bool SolveGivenCell(int currentRow, int currentColumn)
+    {
+        bool response = true;
+        var currentCell = cellBoard[currentRow, currentColumn];
+        if (currentCell.CurrentValue == 0)
+        {
+            // go back tracking. 
+            // This will first attempt to find best guess if not found then back tracks.
+            if (!BackTrackRealThisTime(currentRow, currentColumn))
+            {
+                response = false;
+                Console.WriteLine($"Bug? Unable to solve {currentRow} :: {currentColumn}");
             }
         }
         return response;
@@ -133,8 +155,13 @@ public class Solution
 
     private bool SolveByColumn()
     {
-        // Cheating until we implement this 
-        return SolveByRow();
+        bool response = true;
+        if (!SolveGivenSubBlockByColumn(rowStart: 0, rowEnd: SizeOfSudoku - 1, columnStart: 0, columnEnd: SizeOfSudoku - 1))
+        {
+            response = false;
+            Console.WriteLine("Bug? Unable to solve some of the grid");
+        }
+        return response;
     }
     private bool SolveByRow()
     {
@@ -153,17 +180,18 @@ public class Solution
         if (preBackTrackBestGuess != 0)
         {
             // We have a guess. Update the cell with this value. No need to back track any further
-            UpdateCellValue(currentRow, currentColumn, preBackTrackBestGuess, false, false, true);
+            UpdateCellValue(currentRow, currentColumn, preBackTrackBestGuess, CellState.InProgress);
             return true;
         }
 
+        // TODO: Kichava I am here. Change logic to go one back other until all matches found. Use NotFit of cell
         int startColumnInCurrentRow = currentColumn; // first row, we start with given column, then onwards we always start at end
         for (int tempRow = currentRow; tempRow >= 0; tempRow--)
         {
             for (int tempColumn = startColumnInCurrentRow; tempColumn >= 0; tempColumn--)
             {
                 var tempCell = cellBoard[tempRow, tempColumn];
-                if (tempCell.IsInProgress && tempCell.CurrentValue != 0)
+                if (tempCell.State == CellState.InProgress && tempCell.CurrentValue != 0)
                 {
                     var tempValue = tempCell.CurrentValue;
                     RemoveCellValue(tempRow, tempColumn);
@@ -173,7 +201,7 @@ public class Solution
                     if (currentBestGuess != 0)
                     {
                         // We have a guess. Update the cell with this value.
-                        UpdateCellValue(currentRow, currentColumn, currentBestGuess, false, false, true);
+                        UpdateCellValue(currentRow, currentColumn, currentBestGuess, CellState.InProgress);
                         // Now back trak starting with removed cell again. If return value is true, we can keep it otherwise revert it
                         if (BackTrackRealThisTime(tempRow, tempColumn))
                         {
@@ -183,14 +211,14 @@ public class Solution
                         {
                             // Give up claim. 
                             RemoveCellValue(currentRow, currentColumn);
-                            UpdateCellValue(tempRow, tempColumn, tempValue, false, false, true);
+                            UpdateCellValue(tempRow, tempColumn, tempValue, CellState.InProgress);
                             // Search continues .... 
                         }
                     }
                     else
                     {
                         // Replace the value we removed just now
-                        UpdateCellValue(tempRow, tempColumn, tempValue, false, false, true);
+                        UpdateCellValue(tempRow, tempColumn, tempValue, CellState.InProgress);
                     }
                 }
             }
@@ -211,16 +239,14 @@ public class Solution
         }
         ResetAvailableListsFromCellBoardFor(row, column, currentValue);
     }
-    private void UpdateCellValue(int row, int column, int newValue, bool isInitialValue, bool isSolvedWithConfidence, bool isInProgress)
+    private void UpdateCellValue(int row, int column, int newValue, CellState state)
     {
         if (newValue == 0)
         {
             Console.WriteLine("Bug? Updating zero value?");
         }
         cellBoard[row, column].CurrentValue = newValue;
-        cellBoard[row, column].IsSolvedWithConfidence = isSolvedWithConfidence;
-        cellBoard[row, column].IsInitialValue = isInitialValue;
-        cellBoard[row, column].IsInProgress = isInProgress;
+        cellBoard[row, column].State = state;
 
         UpdateAvailableListsFromCellBoardFor(row, column);
     }
@@ -273,7 +299,7 @@ public class Solution
                 cellBoard[i, j] = cell;
                 if (board[i][j] != '.')
                 {
-                    UpdateCellValue(i, j, (int)Char.GetNumericValue(board[i][j]), true, false, false);
+                    UpdateCellValue(i, j, (int)Char.GetNumericValue(board[i][j]), CellState.InitialValue);
                 }
             }
         }
@@ -284,14 +310,20 @@ public class Solution
         Console.WriteLine("Start : InitializeAllAvailableLiistsWithEverything");
         for (int count = 0; count < SizeOfSudoku; count++)
         {
-            // all are available to begin with.
-            rowAvailableList.Add(count, new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-            columnAvailableList.Add(count, new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
-            gridAvailableList.Add(count, new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+            // All are available to begin with.
+            // There will be "9" available rows, columns, grids starting with. 
+            // Each of these 27 will contain all nine as available.
+            rowAvailableList.Add(count, new List<int>());
+            columnAvailableList.Add(count, new List<int>());
+            gridAvailableList.Add(count, new List<int>());
+            for (int i = 0; i < SizeOfSudoku; i++)
+            {
+                rowAvailableList[count].Add(i);
+                columnAvailableList[count].Add(i);
+                gridAvailableList[count].Add(i);
+            }
         }
         Console.WriteLine("End : InitializeAllAvailableLiistsWithEverything");
-
-
     }
 
     private void ResetAvailableListsFromCellBoardFor(int row, int column, int currentValue)
@@ -307,16 +339,16 @@ public class Solution
     {
         if (!rowAvailableList[row].Remove(cellBoard[row, column].CurrentValue))
         {
-            Console.WriteLine($"Tried to remove a value from rowAvailableList which is not existing {row} and {column}");
+            Console.WriteLine($"Bug? Tried to remove a value from rowAvailableList which is not existing {row} and {column}");
         }
         if (!columnAvailableList[column].Remove(cellBoard[row, column].CurrentValue))
         {
-            Console.WriteLine($"Tried to remove a value from columnAvailableList which is not existing {row} and {column}");
+            Console.WriteLine($"Bug? Tried to remove a value from columnAvailableList which is not existing {row} and {column}");
         }
         var gridKey = GetGridNumber(row, column);
         if (!gridAvailableList[gridKey].Remove(cellBoard[row, column].CurrentValue))
         {
-            Console.WriteLine($"Tried to remove a value from gridAvailabelList which is not existing {row} and {column}");
+            Console.WriteLine($"Bug? Tried to remove a value from gridAvailabelList which is not existing {row} and {column}");
         }
     }
 
@@ -338,30 +370,45 @@ public class Solution
 
         return rowGrid * SizeOfSudoku / 3 + columnGrid;
     }
+
+    internal enum CellState
+    {
+        Empty,
+
+        InitialValue,
+
+        SolvedWithConfidence,
+
+        InProgress,
+    }
+
     internal class Cell
     {
+        public CellState State { get; set; }
         public int CurrentValue { get; set; }
-        // all next bool values can go into enum TODO:
-        public bool IsInitialValue { get; set; }
-        public bool IsSolvedWithConfidence { get; set; }
-        public bool IsInProgress { get; set; }
-        public List<int> NotFitForThisCell { get; set; } // We tried this number for this cell and think this may not fit here.
+
+        // We tried this number for this cell and think this may not fit here.
+        public List<int> NotFitForThisCell { get; set; }
 
         public Cell()
         {
+            State = CellState.Empty;
             NotFitForThisCell = new List<int>();
         }
 
         public void Reset(bool hardReset = false)
         {
             CurrentValue = 0;
-            IsInitialValue = false;
-            IsSolvedWithConfidence = false;
-            IsInProgress = false;
+            State = CellState.Empty;
             if (hardReset)
             {
-                NotFitForThisCell.Clear();
+                ClearNotFitForThis();
             }
+        }
+
+        public void ClearNotFitForThis()
+        {
+            NotFitForThisCell.Clear();
         }
     }
 }
